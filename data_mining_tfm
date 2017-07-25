@@ -1,0 +1,298 @@
+#Librerias necesarias para el analisis
+library("twitteR")
+library("tm")
+library("ggplot2")
+library("SnowballC")
+
+#directorio de trabajo
+setwd("C:/mi_ruta")
+
+source('C:/mi_ruta_fuente', encoding = 'UTF-8')
+
+###########################################################################
+#########################Inicio del analisis de los datos #################
+###########################################################################
+
+df_emociones_csv <- read_tweet_csv("mi_archivo.csv")
+
+df_emociones_csv <- df_emociones_csv[,-3]
+
+#########################################################################
+
+tweet_positivos <-df_emociones_csv[df_emociones_csv$Pos > df_emociones_csv$Neg,]
+
+tweet_positivos_negacion <- tweet_positivos[tweet_positivos$Negacion>0,]
+
+tweet_positivos_sin_negacion <- tweet_positivos[tweet_positivos$Negacion==0,]
+
+##########################################################################
+
+tweet_negativos <-df_emociones_csv[df_emociones_csv$Neg > df_emociones_csv$Pos,]
+
+tweet_negativos_negacion <- tweet_negativos[tweet_negativos$Negacion>0,]
+
+tweet_negativos_sin_negacion <- tweet_positivos[tweet_negativos$Negacion==0,]
+
+##########################################################################
+
+tweet_neutros <-df_emociones_csv[df_emociones_csv$Pos == df_emociones_csv$Neg,]
+
+tweet_neutros_negacion <- tweet_neutros[tweet_neutros$Negacion>0,]
+
+tweet_neutros_sin_negacion <- tweet_positivos[tweet_neutros$Negacion==0,]
+
+##########################################################################
+
+recuento_tweet_pos <- length(tweet_positivos_sin_negacion$UserName)
+recuento_tweet_pos_negacion <- length(tweet_positivos_negacion$UserName)
+
+recuento_tweet_neg <- length(tweet_negativos_sin_negacion$UserName)
+recuento_tweet_neg_negacion <- length(tweet_negativos_negacion$UserName)
+
+recuento_tweet_neutro <- length(tweet_neutros_sin_negacion$UserName)
+recuento_tweet_neutro_negacion <- length(tweet_neutros_negacion$UserName)
+
+###########################################################################
+
+df_recuento_polaridad <- data.frame(Polaridad= c("tweet_positivos", "tweet_positivos_negacion",
+                                                 "tweet_negativos", "tweet_negativos_negacion",
+                                                 "tweet_neutros", "tweet_neutros_negacion"),
+                                    Recuento = c(recuento_tweet_pos, recuento_tweet_pos_negacion,
+                                                 recuento_tweet_neg, recuento_tweet_neg_negacion,
+                                                 recuento_tweet_neutro, recuento_tweet_neutro_negacion)
+)
+##se crea el pdf
+pdf("mi_archivo_pdf.pdf")
+##se hace la visualización
+grafico_barras_polaridad_tweet <-ggplot(data=df_recuento_polaridad, aes(x=df_recuento_polaridad$Polaridad,
+                                                                        y=df_recuento_polaridad$Recuento,
+                                                                        fill= df_recuento_polaridad$Polaridad)) +
+  geom_bar(colour="black",stat="identity")+
+  xlab("Tipo de Tweets")+ylab("Número de Tweets")
+##se libera el grafico para poder tenerlo en el pdf
+grafico_barras_polaridad_tweet
+graphics.off()
+
+############################################################################
+################### tratamiento de los tweet neutros #######################
+
+tweet_neutros_enfado <- tweet_neutros[tweet_neutros$Enf >0 ,]
+
+tweet_neutros_enfado_miedo <- tweet_neutros_enfado[tweet_neutros_enfado$Miedo >0,]
+
+nn<- recuento_tweet_neutros_negativos <- length(tweet_neutros_enfado_miedo$UserName)
+
+##################################################
+
+tweet_neutros_alegria <- tweet_neutros[tweet_neutros$Aleg >0 ,]
+
+tweet_neutros_alegria_sorpresa <- tweet_neutros_alegria[tweet_neutros_alegria$Sorp >0,]
+
+np<- recuento_tweet_neutros_positivos <- length(tweet_neutros_alegria_sorpresa$UserName)
+
+##################################################
+
+
+df_recuento_polaridad <- data.frame(Polaridad= c("tweet_positivos", "tweet_positivos_negacion",
+                                                 "tweet_negativos", "tweet_negativos_negacion",
+                                                 "tweet_neutros", "tweet_neutros_negacion"),
+                                    Recuento = c(recuento_tweet_pos + np, recuento_tweet_pos_negacion,
+                                                 recuento_tweet_neg + nn, recuento_tweet_neg_negacion,
+                                                 recuento_tweet_neutro - nn - np, recuento_tweet_neutro_negacion)
+)
+
+##se crea el pdf
+pdf("mi_archivo_pdf2.pdf")
+##se hace la visualización
+grafico_barras_polaridad_tweet_sin_neg <-ggplot(data=df_recuento_polaridad, aes(x=df_recuento_polaridad$Polaridad,
+                                                                                y=df_recuento_polaridad$Recuento,
+                                                                                fill= df_recuento_polaridad$Polaridad)) +
+  geom_bar(colour="black",stat="identity")+
+  xlab("Tipo de Tweets")+ylab("Número de Tweets")
+##se libera el grafico para poder tenerlo en el pdf
+grafico_barras_polaridad_tweet_sin_neg
+graphics.off()
+############################################################################
+##################### total polaridades ####################################
+############################################################################
+
+sum_pos <- df_recuento_polaridad$Recuento[df_recuento_polaridad$Polaridad == "tweet_positivos"]
+sum_neg <- df_recuento_polaridad$Recuento[df_recuento_polaridad$Polaridad == "tweet_negativos"]
+sum_neutro <- df_recuento_polaridad$Recuento[df_recuento_polaridad$Polaridad == "tweet_neutros"]
+sum_pos_neg <- df_recuento_polaridad$Recuento[df_recuento_polaridad$Polaridad == "tweet_positivos_negacion"]
+sum_neg_neg <- df_recuento_polaridad$Recuento[df_recuento_polaridad$Polaridad == "tweet_negativos_negacion"]
+sum_neutro_neg <- df_recuento_polaridad$Recuento[df_recuento_polaridad$Polaridad == "tweet_neutros_negacion"]
+
+df_recuento_polaridad_final <- data.frame(Polaridad= c("Tweet_Positivos", "Tweet_Neutros","Tweet_Negativos"),
+                                          Recuento= c(sum_pos + sum_neg_neg, sum_neutro, 
+                                                      sum_neg+ sum_pos_neg + sum_neutro_neg ))
+
+write_tweet_csv(df_recuento_polaridad_final, "venezuela_polaridad_final_20170716.csv")
+
+###graficarlo
+##se crea el pdf
+pdf("mi_archivo_polaridad.pdf")
+##se hace la visualización
+grafico_barras_polaridad_final_tweet <-ggplot(data=df_recuento_polaridad_final, aes(x=df_recuento_polaridad_final$Polaridad,
+                                                                                    y=df_recuento_polaridad_final$Recuento,
+                                                                                    fill= df_recuento_polaridad_final$Polaridad)) +
+  geom_bar(colour="black",stat="identity")+
+  xlab("Tipo de Tweets")+ylab("Número de Tweets")
+##se libera el grafico para poder tenerlo en el pdf
+grafico_barras_polaridad_final_tweet
+graphics.off()
+
+############################################################################
+################### graficar el total de las emociones #####################
+
+df_recuento_emociones <- data.frame(Emocion= c("Enfado", "Anticipación",
+                                               "Disgusto", "Miedo",
+                                               "Alegria", "Tristeza",
+                                               "Sorpresa", "Confianza"),
+                                    Recuento = c(sum(df_emociones_csv$Enf),
+                                                 sum(df_emociones_csv$Anti),
+                                                 sum(df_emociones_csv$Disg),
+                                                 sum(df_emociones_csv$Miedo),
+                                                 sum(df_emociones_csv$Aleg),
+                                                 sum(df_emociones_csv$Tris),
+                                                 sum(df_emociones_csv$Sorp),
+                                                 sum(df_emociones_csv$Conf))
+)
+
+write_tweet_csv(df_recuento_emociones, "mi_archivo_emociones.csv")
+
+##se crea el pdf
+pdf("grafico_barras_suma_emociones_20170716.pdf")
+##se hace la visualización
+grafico_barras_emociones_tweet <-ggplot(data=df_recuento_emociones, aes(x=df_recuento_emociones$Emocion,
+                                                                        y=df_recuento_emociones$Recuento,
+                                                                        fill= df_recuento_emociones$Emocion)) +
+  geom_bar(colour="black",stat="identity")+
+  xlab("Emociones")+ylab("Número de Palabras asociadas a las emociones")
+##se libera el grafico para poder tenerlo en el pdf
+grafico_barras_emociones_tweet
+graphics.off()
+
+############################################################################
+
+
+############################################################################
+################### buscar los tweet con más RT ##########################
+
+df_RT <- read_tweet_csv("mi_archivo.csv")
+
+
+##se buscar y guardan los RT
+table(df_RT$retweetCount >= 18000)
+
+selected <- which(df_RT$retweetCount >= 18000)
+
+df_RT_max <- df_RT[selected,]
+
+df_RT_max_sin_repeticion <- df_RT_max[!duplicated(df_RT_max$text, fromLast = TRUE), ]
+
+
+write_tweet_csv(df_RT_max_sin_repeticion, "mi_archivo_RT.csv")
+
+
+############################################################################
+###################### evolución de la polaridad ###########################
+
+
+############################################################################
+###################### clasificacion de los radicales ######################
+############################################################################
+
+df_emociones_csv <- read_tweet_csv("mi_archivo_emociones.csv")
+
+df_emociones_csv <- df_emociones_csv[,-3]
+
+df_polneg <- df_emociones_csv[df_emociones_csv$Neg > 0,]
+
+df_polneg_sinpos <- df_polneg[df_polneg$Neg > df_polneg$Pos,]
+
+df_aux_rad <-df_polneg_sinpos_no_negacion <- df_polneg_sinpos[df_polneg_sinpos$Negacion ==0,]
+
+df_aux1_radicales <- data.frame(Usuario = df_aux_rad$UserName, Neg = df_aux_rad$Neg, Enf = df_aux_rad$Enf, 
+                                Miedo =  df_aux_rad$Miedo, Intensidad = df_aux_rad$Intensificador)
+
+
+df_aux_radicales <- data.frame(Usuario = df_aux_rad$UserName, Neg = df_aux_rad$Neg, Enf = df_aux_rad$Enf, 
+                               Miedo =  df_aux_rad$Miedo, Intensidad = df_aux_rad$Intensificador,
+                               Grado_radical=rowSums(df_aux1_radicales[,2:4]))
+
+df_radicales <- data.frame(Usuario = df_aux_radicales$Usuario, Grado_radical = df_aux_radicales$Grado_radical,
+                           Intensidad = df_aux_radicales$Intensidad)
+########################################################################################################
+
+df_rad_1 <- df_radicales[df_radicales$Grado_radical <= 3,]
+
+if (length(df_rad_1$Usuario) > 0){
+  df_radicales_1 <- data.frame(Usuario = df_rad_1$Usuario, Grado_radical = as.numeric(1))
+}else{
+  df_radicales_1 <- data.frame(Usuario = "usuario_nulo", Grado_radical = as.numeric(1))
+}
+
+
+########################################################################################################
+df_rad_2 <- df_radicales[df_radicales$Grado_radical > 3 & df_radicales$Grado_radical <= 6,]
+
+if (length(df_rad_2$Usuario) > 0){
+  df_radicales_2 <- data.frame(Usuario = df_rad_2$Usuario, Grado_radical = as.numeric(2))
+}else{
+  df_radicales_2 <- data.frame(Usuario = "usuario_nulo", Grado_radical = as.numeric(2))
+}
+
+
+########################################################################################################
+df_rad_3 <- df_rad_2 <-df_radicales[df_radicales$Grado_radical >6 & df_radicales$Grado_radical <= 10,]
+
+if (length(df_rad_3$Usuario) > 0){
+  df_radicales_3 <- data.frame(Usuario = df_rad_3$Usuario, Grado_radical = as.numeric(3))
+}else{
+  df_radicales_3 <- data.frame(Usuario = "usuario_nulo", Grado_radical = as.numeric(3))
+}
+
+
+########################################################################################################
+
+df_rad_4 <- df_radicales[df_radicales$Grado_radical > 10,]
+
+if (length(df_rad_4$Usuario) > 0){
+  df_radicales_4 <- data.frame(Usuario = df_rad_4$Usuario, Grado_radical = as.numeric(4))
+}else{
+  df_radicales_4 <- data.frame(Usuario = "usuario_nulo", Grado_radical = as.numeric(4))
+}
+
+########################################################################################################
+
+df_radical_aux1 <- rbind(df_radicales_1, df_radicales_2)
+df_radical_aux2 <- rbind(df_radical_aux1, df_radicales_3)
+df_radical <- rbind(df_radical_aux2, df_radicales_4)
+
+write_tweet_csv(df_radical, "mi_archivo_radicales.csv")
+
+############################################################################
+################### graficar el total de los radicales #####################
+
+df_recuento_radicales <- data.frame(Radical= c( "Radical_1","Radical_2", 
+                                                "Radical_3", "Radical_4"),
+                                    Recuento = c(length(df_radicales_1$Usuario),
+                                                 length(df_radicales_2$Usuario),
+                                                 length(df_radicales_3$Usuario),
+                                                 length(df_radicales_4$Usuario))
+)
+
+write_tweet_csv(df_radical, "mi_archivo_radicales_total.csv")
+
+##se crea el pdf
+pdf("grafico_barras_radicales_20170716.pdf")
+##se hace la visualización
+grafico_barras_emociones_tweet <-ggplot(data=df_recuento_radicales, aes(x=df_recuento_radicales$Radical,
+                                                                        y=df_recuento_radicales$Recuento,
+                                                                        fill= df_recuento_radicales$Radical)) +
+  geom_bar(colour="black",stat="identity")+
+  xlab("Grado Radicales")+ylab("Recuento")
+##se libera el grafico para poder tenerlo en el pdf
+grafico_barras_emociones_tweet
+graphics.off()
