@@ -1,0 +1,377 @@
+##############################################################################
+################   PAQUETE DE FUNCIONES TFM ROBERTO CASADO  ##################
+##############################################################################
+
+
+################   funcion limpieza de tweets vectores   #####################
+
+limpieza_tweets_vector <- function(x){
+  
+  df = twListToDF(x)
+  ##############################################################################
+  
+  # obtiene el texto de los tweets
+  txt = df$text
+  ############################# inicio limpieza de datos #######################
+  # remueve retweets
+  txtclean = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", txt)
+  # remove @otragente
+  txtclean = gsub("@\\w+", "", txtclean)
+  # remove #hastag
+  txtclean = gsub("#\\w+", "", txtclean)
+  
+  # remueve links
+  #txtclean = gsub("http\\w+", "", txtclean)
+  txtclean = gsub("http[[:alnum:][:punct:]]*", "", txtclean)
+  
+  # remueve simbolos de puntuaciÃ³n
+  txtclean = gsub("á", "a", txtclean)
+  txtclean = gsub("é", "e", txtclean)
+  txtclean = gsub("í", "i", txtclean)
+  txtclean = gsub("ó", "o", txtclean)
+  txtclean = gsub("ú", "u", txtclean)
+  txtclean = gsub("ñ", "n", txtclean)
+  txtclean = gsub(",", " ", txtclean)
+  txtclean = gsub(":", " ", txtclean)
+  txtclean = gsub(";", " ", txtclean)
+  txtclean = gsub("/", " ", txtclean)
+  txtclean = gsub("\"", " ", txtclean)
+  txtclean = iconv(txtclean, "latin1", "ASCII", sub = "")
+  
+  # remover \n
+  txtclean = gsub("\n", " ",txtclean)
+  # remove nÃºmeros
+  txtclean = gsub("[[:digit:]]", "", txtclean)
+  
+  
+  return(txtclean)
+  
+}
+
+##############################################################################
+##############################################################################
+
+################   funcion limpieza de tweets data frames   ##################
+
+limpieza_tweets_data_frame <- function(x){
+  
+  # obtiene el texto de los tweets
+  txt = x
+  ############################# inicio limpieza de datos #######################
+  # remueve retweets
+  txtclean = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", txt)
+  # remove @otragente
+  txtclean = gsub("@\\w+", "", txtclean)
+  # remove #hastag
+  txtclean = gsub("#\\w+", "", txtclean)
+  
+  # remueve links
+  #txtclean = gsub("http\\w+", "", txtclean)
+  txtclean = gsub("http[[:alnum:][:punct:]]*", "", txtclean)
+  
+  # remueve simbolos de puntuaciÃ³n
+  txtclean = gsub("á", "a", txtclean)
+  txtclean = gsub("é", "e", txtclean)
+  txtclean = gsub("í", "i", txtclean)
+  txtclean = gsub("ó", "o", txtclean)
+  txtclean = gsub("ú", "u", txtclean)
+  txtclean = gsub("ñ", "n", txtclean)
+  txtclean = gsub(",", " ", txtclean)
+  txtclean = gsub(":", " ", txtclean)
+  txtclean = gsub(";", " ", txtclean)
+  txtclean = gsub("/", " ", txtclean)
+  txtclean = gsub("\"", " ", txtclean)
+  txtclean = iconv(txtclean, "latin1", "ASCII", sub = "")
+  
+  # remover \n
+  txtclean = gsub("\n", " ",txtclean)
+  # remove números
+  txtclean = gsub("[[:digit:]]", "", txtclean)
+  
+  
+  return(txtclean)
+  
+}
+
+##############################################################################
+##############################################################################
+
+
+##############################################################################
+##############################################################################
+
+#funcion que busca en el lexicom las emociones################################
+palabra.emociones <- function(x){
+  
+  lexicom <- read.csv("C:/Users/rober/Desktop/TFM STUFF/Lexicom/Emolex_csv.csv")
+  
+  registro <- match(x,lexicom$Palabras)
+  
+  
+  d <- data.frame(lexicom)
+  
+  
+  emociones <- d[registro, 1:12] 
+  return(emociones)
+}
+
+##############################################################################
+##############################################################################
+
+#funcion que parte los tweet y suma las emociones################################
+suma.emociones <- function(x){
+  
+  
+  palabras <- unlist(strsplit(x , ' '))  
+  
+  lexicom <- read.csv("C:/Users/rober/Desktop/TFM STUFF/Lexicom/Emolex_csv.csv")
+  
+  registro <- match(palabras,lexicom$Palabras)
+  
+  palabras_en_lexicon <- data.frame(palabras, registro)
+  
+################################################################################ 
+  ######################## detección de negaciones ############################# 
+
+  negaciones <- match(palabras, c("no"))
+  
+  negaciones[is.na(negaciones)] <- as.numeric(0)
+  
+  negaciones <- sum(negaciones)
+  
+  if( negaciones ==0) {negacion <-0}else{negacion <-1}
+###############################################################################  
+  
+  ################################################################################ 
+  ######################## detección de intensificadores ############################# 
+  
+  df_adverbio <- data.frame(Adverbios=c("demasiado","muy", "bastante","mucho",
+                                        "menos","poco",
+                                        "nunca", "tampoco"),
+                            modificador=c(as.numeric(2),as.numeric(1.8),as.numeric(1.5),as.numeric(1.3),
+                                          as.numeric(0.5),as.numeric(0.3),
+                                          as.numeric(-0.4),as.numeric(-0.8)))
+  
+  posicion_adverbio <- match(palabras, df_adverbio$Adverbios)
+  
+  puntuacion_advervio <- df_adverbio[posicion_adverbio,]$modificador
+  
+  
+  puntuacion_advervio[is.na(puntuacion_advervio)] <- as.numeric(0)
+  
+  modificador <- sum(puntuacion_advervio)
+  
+  ############################################################################### 
+  
+  
+  palabras_en_lexicon <- palabras_en_lexicon[!is.na(registro),]
+  
+  
+  d <- lapply(palabras_en_lexicon$palabras, palabra.emociones)
+  
+  df <- data.frame(do.call(rbind, d))
+  
+  ############esto habria que meterlo en una función!!!
+  Pos <- sum(df$Pos)
+  Neg <- sum(df$Neg)
+  Enf <- sum(df$Enf)
+  Anti <- sum(df$Anti)
+  Disg <- sum(df$Disg)
+  Miedo <- sum(df$Miedo)
+  Aleg <- sum(df$Aleg)
+  Tris <- sum(df$Tris)
+  Sorp <- sum(df$Sorp)
+  Conf <- sum(df$Conf)
+  Negacion <- negacion
+  Intensificador <- sum(modificador)
+  ##############################################
+  ###############################################
+  df_final <- data.frame(Pos, Neg, Enf, Anti, Disg, Miedo, Aleg, Tris,
+                         Sorp, Conf, Negacion, Intensificador)
+  
+  return(df_final)
+  
+  
+}
+#################################################################################
+#################################################################################
+
+##################Funcion que hace todo el proceso completo de analisis########
+
+ExtractEmotionVector <- function (x, y ){
+  
+  usernames<-sapply(y, function(x) x$getScreenName())
+  userids<-sapply(y, function(x) x$getId())
+  
+  emociones <- lapply(x,  suma.emociones)
+  df <-  data.frame(do.call(rbind, emociones))
+  df_emociones <- data.frame(UserName=usernames,UserId=userids,df)
+  return(df_emociones)
+}
+
+###############################################################################
+###############################################################################
+
+###################   construir tdm   ###############
+
+construir_tdm <- function(x){
+  
+  # construye un corpus
+  corpus = Corpus(VectorSource(x))
+  
+  # lleva a minÃºsculas
+  d  <- tm_map(corpus, tolower)
+  
+  # quita espacios en blanco
+  d  <- tm_map(d, stripWhitespace)
+  
+  # remueve la puntuacion
+  d <- tm_map(d, removePunctuation)
+  
+  # carga mi archivo de palabras vacias personalizada y lo convierte a ASCII
+  sw <- readLines("C:/stopwords.txt",encoding="UTF-8")
+  sw = iconv(sw, to="ASCII//TRANSLIT")
+  
+  # remueve palabras vacias personalizadas
+  d <- tm_map(d, removeWords, sw)
+  d <- tm_map(d, PlainTextDocument)
+  # crea matriz de terminos
+  d = Corpus(VectorSource(d))
+  tdm <- TermDocumentMatrix(d)
+  
+  return(tdm)
+  
+}
+
+###############################################################################
+###############################################################################
+
+
+###############################################################################
+###############################################################################
+
+###################   Escribe archivo   ###############
+
+write_tweet_csv <- function(x, y){
+  
+write.csv(x,file = y)
+  
+}
+
+###############################################################################
+###############################################################################
+
+###############################################################################
+###############################################################################
+
+###################   lee archivo   ###############
+
+read_tweet_csv <- function(x){
+  
+  p <- read.csv2(x, sep = ",", header = TRUE)
+  
+  df_p <- data.frame(p)
+  
+  return(df_p)
+  
+}
+
+###############################################################################
+###############################################################################
+
+###############################################################################
+###############################################################################
+
+###################   Función para grafos con cluster   #######################
+
+usuario_max_frec_grafo_cluster <- function(x,y){ #x = usuario, y = numero amigos cluster
+usuario <- getUser(x)
+
+seguidos <- usuario$getFriends(n=y)
+
+df <- lapply(seguidos,function(x) x$getScreenName())
+
+df <- t(data.frame(df))
+
+
+##############################################
+tiempoparada = 10
+f <- lapply(seguidos,function(x){ a <-x$getFriends(n=10)
+Sys.sleep(tiempoparada)
+return(a)})
+#################################################
+
+lista.nombres <- lapply(f, function(l2){lapply(l2, function(x) x$getScreenName())})
+lista.nombres <- lapply(lista.nombres, function(x){t(data.frame(x))})
+lista.nombres <- sapply(lista.nombres, function(x){paste(x,collapse = " " )})
+lista.nombres <- lapply(f, function(l2){lapply(l2, function(x) x$getScreenName())})
+lista.nombres <- lapply(lista.nombres, function(x){t(data.frame(x))})
+lista.nombres <- sapply(lista.nombres, function(x){paste(x,collapse = "  " )})
+
+
+corpus <- Corpus(VectorSource(lista.nombres))
+nombrestdm <- as.matrix(TermDocumentMatrix(corpus))
+df<-colnames(nombrestdm)
+
+numamig = 1
+nombrestdm <- Matrix(nombrestdm[rowSums(nombrestdm)>=numamig,], sparse = TRUE )
+
+indices <- summary(nombrestdm)
+
+relacion <- data.frame(User=usuario_max_frecuencia,Friend=df)
+
+relacion <- merge(relacion, data.frame(User=colnames(nombrestdm)[indices$j],
+                                       Friend = rownames(nombrestdm)[indices$i]),all=T)
+
+################################################################################
+
+## Creamos el grafo de las relaciones
+
+g <- graph.data.frame(relacion, directed = FALSE)
+V(g)$label <- V(g)$name
+V(g)$color <- "lightblue"
+V(g)$color[1] <- "red"
+inx <- match(df,V(g)$name)
+V(g)$color[inx] <- "lightgreen"
+tkplot(g)
+}
+
+###############################################################################
+###############################################################################
+
+
+###############################################################################
+###############################################################################
+
+###################   grafo de relaciones con el usuario   ####################
+
+usuario_max_frec_relaciones <- function(Usuario,y,Seguidores_max){
+  
+  usuario<-getUser(Usuario)
+  seguidos<-lookupUsers(usuario$getFriendIDs(n=y))
+  seguidores <-lookupUsers(usuario$getFollowerIDs(n=y))
+  # Obtiene los nombres de seguidos y seguidores
+  seguidos <- sapply(seguidos,name)
+  seguidores <- sapply(seguidores,name)
+  
+  #length(seguidos)
+  #length(seguidores)
+  # Crea un dataframe con las relaciones
+  relaciones <- merge(data.frame(usuario=usuario_max_frecuencia,
+                                 Follower=seguidos[1:Seguidores_max]),
+                      data.frame(usuario=seguidores[1:Seguidores_max],
+                                 Follower=usuario_max_frecuencia), all=T)
+  
+  #relaciones
+  
+  # Crea un grafo de las relaciones
+  
+  g <- graph.data.frame(relaciones, directed = TRUE)
+  V(g)$color<-"blue"
+  V(g)$color[1] <- "red"
+  tkplot(g)
+  
+}
+
+###############################################################################
+###############################################################################
