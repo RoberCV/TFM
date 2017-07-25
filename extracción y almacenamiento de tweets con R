@@ -1,0 +1,48 @@
+#Librerias necesarias para el analisis
+library("twitteR")
+library("tm")
+library("ggplot2")
+library("SnowballC")
+
+#directorio de trabajo
+setwd("mi_ruta")
+
+###########################################################################
+##########conexi?n a twitter###############################################
+consumer_key <- 'xxxxxx'
+consumer_secret <- 'xxxxxxxxxxxxx'
+access_token <- 'xxxxxxxxxxxxx'
+access_secret <- 'xxxxxxxxxxxxxxxx'
+
+setup_twitter_oauth(consumer_key,
+                    consumer_secret,
+                    access_token,
+                    access_secret)
+
+
+source('C:/Users/rober/Desktop/TFM STUFF/Script R/Funciones_R.R', encoding = 'UTF-8')
+
+
+
+##############################################################################
+#########################  INICIO DEL PROGRAMA   #############################
+##############################################################################
+
+##############   descarga de tweet y guardado    #############################
+
+
+tweets_descargados = searchTwitter("venezuela", lang="es",n=25000, since = '2017-07-15', until = '2017-07-16')
+
+df_twt <- twListToDF(tweets_descargados)
+
+write_tweet_csv(df_twt, "mi_archivo.csv")
+
+
+###############################################################################
+##################Función que hace todo el proceso completo de analisis########
+
+tweets_procesados <- limpieza_tweets_vector(tweets_descargados)
+
+df_emociones <-ExtractEmotionVector(tweets_procesados,tweets_descargados)
+
+write_tweet_csv(df_emociones, "mi_archivo.csv")
